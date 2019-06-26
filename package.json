@@ -1,0 +1,19 @@
+{
+  "name": "html5dj",
+  "version": "1.0.0",
+  "description": "HTML5 based app for playing tracks like a CDJ",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/klonspace/HTML5DJ.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/klonspace/HTML5DJ/issues"
+  },
+  "homepage": "https://github.com/klonspace/HTML5DJ#readme"
+}
