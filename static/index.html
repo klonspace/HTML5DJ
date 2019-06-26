@@ -40,13 +40,13 @@
 
         
         var musicSource;
-        function play(audioBuffer) {
+        function play(audioBuffer, whatMoment) {
             musicSource = context.createBufferSource();
             musicSource.buffer = audioBuffer;
             musicSource.connect(context.destination);
             musicSource.loop = true;
-            musicSource.start();
-            draw();
+            musicSource.start(0, whatMoment);
+            currSongTime = whatMoment;
         }
 
         var canvas = document.createElement("canvas");
@@ -80,6 +80,15 @@
         var vinylAdjust = 1.3;
 
         var drawSpeed = 2;
+        var lastTUpdate = 0;
+        function updateTime() {
+            if(lastTUpdate != 0 && playing) {
+                var delta = new Date().getTime() - lastTUpdate;
+                currSongTime += speed*delta/1000;
+            }
+            lastTUpdate = new Date().getTime();
+            setTimeout(updateTime, 0)
+        }
         function draw() {
             if(jogDown) {
                 currMove = moveStart + startJog - currJog;
@@ -88,7 +97,7 @@
                 //console.log(speed)
                 lastJogChange = startJog - currJog;
             }
-            console.log(edgeDown)
+            //console.log(edgeDown)
             if(edgeDown) {
                 console.log("tempo adjust")
                 targetSpeed = 1 + tempo*0.08 + ((startEdge - currEdge) - lastEdgeChange)/100;
@@ -104,8 +113,8 @@
             speed += (targetSpeed - speed)/vinylAdjust;
             //console.log(speed);
 
-            currSongTime += speed;
-            //console.log(currSongTime/60)
+            //currSongTime += speed;
+            //console.log(currSongTime/1000)
             musicSource.playbackRate.setValueAtTime(speed, 0);
             ctx.fillStyle = "rgb(40, 40, 40)";
             ctx.fillRect(0, 0, cWidth, cHeight)
@@ -140,6 +149,10 @@
             ctx.fillRect(0, -tempo*cHeight/2, cWidth/3, 30)
             ctx.restore();
 
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 7*cHeight/8, cWidth, cHeight/8)
+
+
             requestAnimationFrame(draw)
         }
         var edgeDown = 0;
@@ -157,41 +170,74 @@
 
         var tempo = 0;
 
+        var cued = false;
+        var cueMoment = 0;
+
+        var cuePlaying = false;
+
         function handleMouseDown(e) {
-            console.log(e.touches)
-            if(playing) {   
+            //console.log(e.touches)
+            if(playing) {
                 for(var i = 0; i < e.touches.length; i++) {
-                    if(e.touches[i].pageX < 2*window.innerWidth/3) {
-                        if(e.touches[i].pageX < window.innerWidth/3 && !jogDown) {
-                            jogDown = e.touches[i].identifier;
+                    if(e.touches[i].pageY > 7*cHeight/8) {
+                        if(cued) {
 
-                            startJog = e.touches[i].clientY;
-                            currJog = e.touches[i].clientY;
-
-                            moveStart = currMove;
-
-                            lastJogChange = 0;
+                            console.log(cueMoment)
+                            play(yodelBuffer, cueMoment)
+                            //cued = false;
+                            cuePlaying = e.touches[i].identifier;
                         }
-                        else if(!edgeDown){
-                            console.log("edge down");
-                            edgeDown = e.touches[i].identifier;
-                            startEdge = e.touches[i].clientY;
-                            currEdge = e.touches[i].clientY;
+                        else if(jogDown) {
+                            cued = true;
+                            cueMoment = currSongTime;
+                            musicSource.stop();
 
-                            lastEdgeChange = 0;
+                            console.log("cued")
                         }
+                        else {
+
+                            musicSource.stop();
+                            play(yodelBuffer, cueMoment)
+                            cued = false; 
+                        }
+                    }
+                    else {
+                        if(e.touches[i].pageX < 2*window.innerWidth/3) {
+                            if(e.touches[i].pageX < window.innerWidth/3 && !jogDown) {
+                                jogDown = e.touches[i].identifier;
+
+                                startJog = e.touches[i].clientY;
+                                currJog = e.touches[i].clientY;
+
+                                moveStart = currMove;
+
+                                lastJogChange = 0;
+                            }
+                            else if(!edgeDown){
+                                console.log("edge down");
+                                edgeDown = e.touches[i].identifier;
+                                startEdge = e.touches[i].clientY;
+                                currEdge = e.touches[i].clientY;
+
+                                lastEdgeChange = 0;
+                            }
+                            
+                        }
+                        else if(!changingTempo){
+                            tempo = -(e.touches[i].clientY - window.innerHeight/2)/(window.innerHeight/2)
+                            changingTempo = e.touches[i].identifier;
+                        }
+                    }
                         
-                    }
-                    else if(!changingTempo){
-                        tempo = -(e.touches[i].clientY - window.innerHeight/2)/(window.innerHeight/2)
-                        changingTempo = e.touches[i].identifier;
-                    }
                 }
                 
             }
             else {
-                play(yodelBuffer)
+                play(yodelBuffer, 0)
                 playing = true;
+
+            draw();
+            updateTime()
             }
             e.preventDefault();
             return false;
@@ -214,6 +260,7 @@
             var jogStillDown = false;
             var edgeStillDown = false;
             var tempoStillDown = false;
+            var cueStillDown = false;
             for(var i = 0; i < e.touches.length; i++) {
                 if(e.touches[i].identifier == jogDown) {
                     jogStillDown = true;
@@ -224,11 +271,17 @@
                 if(e.touches[i].identifier == changingTempo) {
                     tempoStillDown = true;
                 }
+                if(e.touches[i].identifier == cuePlaying) {
+                    cueStillDown = true;
+                } 
             }
             if(!jogStillDown) jogDown = 0;
             if(!edgeStillDown) edgeDown = 0;
             if(!tempoStillDown) changingTempo = 0;
-            console.log(e.touches)
+            if(!cueStillDown && cued) {
+                musicSource.stop();
+            }
+            // console.log(e.touches)
         }
         canvas.addEventListener("touchstart", handleMouseDown, false)
         document.body.addEventListener("touchmove", handleMouseMove)
