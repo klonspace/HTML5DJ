@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/klonspace/HTML5DJ/issues"
   },
-  "homepage": "https://github.com/klonspace/HTML5DJ#readme"
+  "homepage": "https://github.com/klonspace/HTML5DJ#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
 }
